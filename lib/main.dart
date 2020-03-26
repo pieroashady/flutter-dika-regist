@@ -1,170 +1,68 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:dika_regist/components/file_status.dart';
-import 'package:dio/dio.dart';
+import 'package:dika_regist/components/login.dart';
+import 'package:dika_regist/components/submit_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() => runApp(MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String name = prefs.getString('inputName');
+  String nip = prefs.getString("inputNip");
+  print('Name $name and NIP $nip');
+
+  runApp(MaterialApp(
+      title: 'DIKA E-Regist',
       theme: ThemeData(
           primarySwatch: Colors.red, textTheme: GoogleFonts.ralewayTextTheme()),
-      home: MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
+      home: name != null && nip != null ? SubmitPage() : Login()));
 }
 
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
+// class MyApp extends StatefulWidget {
+//   // This widget is the root of your application.
 
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
+//   @override
+//   _MyAppState createState() => _MyAppState();
+// }
 
-class _MyHomePageState extends State<MyHomePage> {
-  var data;
-  File _imageFile;
-  File _videoFile;
+// class _MyAppState extends State<MyApp> {
+//   String name, nip;
 
-  @override
-  void initState() {
-    super.initState();
-  }
+//   SharedPreferences prefs;
+//   Widget _toChoose;
 
-  Future _getImage() {
-    return ImagePicker.pickImage(source: ImageSource.camera).then((image) {
-      setState(() {
-        _imageFile = image;
-        print(_imageFile.toString());
-      });
-    }).catchError((error) => debugPrint(error));
-  }
+//   @override
+//   void initState() {
+//     super.initState();
+//     //_test();
+//   }
 
-  Future _getVideo() {
-    return ImagePicker.pickVideo(source: ImageSource.camera).then((video) {
-      setState(() {
-        _videoFile = video;
-      });
-      print(_videoFile);
-    }).catchError((error) {
-      print(error);
-    });
-  }
+//   Future _test() async {
+//     prefs = await SharedPreferences.getInstance();
+//     name = prefs.getString('inputName');
+//     nip = prefs.getString("inputNip");
 
-  Future _uploadData() async {
-    String username = 'adminDika';
-    String password = 'D1k4@passw0rd';
-    String basicAuth =
-        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+//     if (name != null && nip != null) {
+//       setState(() {
+//         print("Has value");
+//         _toChoose = SubmitPage();
+//       });
+//     } else {
+//       print("No value");
+//       setState(() {
+//         _toChoose = Login();
+//       });
+//     }
+//   }
 
-    Dio dio = Dio();
-    var fileName =
-        'Aldi' + new DateTime.now().millisecondsSinceEpoch.toString();
-    FormData formData = FormData.fromMap({
-      "name": "Aldi",
-      "nik": "12173055",
-      "video_file": await MultipartFile.fromFile(_videoFile.path,
-          filename: "video" + fileName),
-      "ktp_image": await MultipartFile.fromFile(_imageFile.path,
-          filename: "ktp" + fileName),
-    });
-    dio
-        .post("http://52.77.8.120/upload.php",
-            data: formData,
-            options:
-                Options(headers: <String, String>{'authorization': basicAuth}))
-        .then((value) {
-      value.statusCode == 200 ? print("Success") : print(value.statusCode);
-    }).catchError((err) => print(err));
-  }
-
-  Widget _uploadStatus() {
-    return Container(
-      padding: EdgeInsets.all(20),
-      child: FileStatus(
-        imgFile: _imageFile,
-        videoFile: _videoFile,
-      ),
-    );
-  }
-
-  Widget _textStatus() {
-    return _videoFile == null || _imageFile == null
-        ? Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child:
-                Text("Upload foto selfie kamu dan video kamu selama 2 detik"),
-          )
-        : Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child: Text("All is set up"),
-          );
-  }
-
-  Widget _submitButton() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        _videoFile == null || _imageFile == null
-            ? Container(
-                height: 50,
-                child: RaisedButton(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0)),
-                  color: Colors.redAccent,
-                  onPressed: _getVideo,
-                  child: const Text('Upload Video',
-                      style: TextStyle(fontSize: 20, color: Colors.white)),
-                ),
-              )
-            : Container(
-                height: 50,
-                child: RaisedButton(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0)),
-                  color: Colors.redAccent,
-                  onPressed: _uploadData,
-                  child: const Text('Submit Data',
-                      style: TextStyle(fontSize: 20, color: Colors.white)),
-                ),
-              ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-          centerTitle: true,
-          title: Text(
-            'DIKA Regist',
-            style: GoogleFonts.raleway(
-                fontWeight: FontWeight.normal, letterSpacing: 1.5),
-          )),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          _uploadStatus(),
-          _textStatus(),
-          _submitButton(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getImage,
-        tooltip: 'Open camera',
-        child: Icon(Icons.camera),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return MaterialApp(
+//       title: 'Flutter Demo',
+//       theme: ThemeData(
+//           primarySwatch: Colors.red, textTheme: GoogleFonts.ralewayTextTheme()),
+//       home: Login(),
+//     );
+//   }
+// }

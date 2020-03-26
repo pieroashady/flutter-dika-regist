@@ -22,9 +22,7 @@ class _FileStatusState extends State<FileStatus> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text("KTP Status"),
-              SizedBox(
-                height: 20,
-              ),
+              SizedBox(height: 20),
               Text("Video Status")
             ],
           ),
@@ -36,9 +34,7 @@ class _FileStatusState extends State<FileStatus> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
               widget.imgFile == null ? Text("❌") : Text("✔️"),
-              SizedBox(
-                height: 20,
-              ),
+              SizedBox(height: 20),
               widget.videoFile == null ? Text('❌') : Text("✔️")
             ],
           ),
