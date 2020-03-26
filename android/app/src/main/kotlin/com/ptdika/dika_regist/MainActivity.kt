@@ -1,4 +1,4 @@
-package com.example.dika_regist
+package com.ptdika.dika_regist
 
 import androidx.annotation.NonNull;
 import io.flutter.embedding.android.FlutterActivity
