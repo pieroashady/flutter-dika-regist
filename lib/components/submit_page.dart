@@ -6,6 +6,7 @@ import 'package:dika_regist/components/login.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_compress/flutter_video_compress.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:progress_dialog/progress_dialog.dart';
@@ -141,6 +142,11 @@ class _SubmitPageState extends State<SubmitPage> {
   }
 
   Future _uploadData() async {
+    Position position = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+
+    String long = position.longitude.toString();
+    String lat = position.latitude.toString();
+
     String username = 'adminDika';
     String password = 'D1k4@passw0rd';
     String basicAuth =
@@ -162,10 +168,12 @@ class _SubmitPageState extends State<SubmitPage> {
     FormData formData = FormData.fromMap({
       "name": name,
       "nik": nip,
+      "longitude" : long,
+      "latitude" : lat,
       "ktp_image": await MultipartFile.fromFile(_imageFile.path,
           filename: "ktp" + fileName + ".jpg"),
       "video_file": await MultipartFile.fromFile(_videoFile.path,
-          filename: "video" + fileName + ".mp4")
+          filename: "video" + fileName + ".avi")
     });
 
     pr = new ProgressDialog(context,
