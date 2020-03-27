@@ -13,6 +13,7 @@ Future<void> main() async {
   print('Name $name and NIP $nip');
 
   runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'DIKA E-Regist',
       theme: ThemeData(
           primarySwatch: Colors.red, textTheme: GoogleFonts.ralewayTextTheme()),

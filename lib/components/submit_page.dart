@@ -30,6 +30,10 @@ class _SubmitPageState extends State<SubmitPage> {
   var _flutterVideoCompress = FlutterVideoCompress();
   SharedPreferences prefs;
   String baseUrl = "http://52.77.8.120/upload.php";
+  Geolocator geolocator = Geolocator();
+  Position userPosition;
+  String userLongitude;
+  String userLatitude;
 
   var alertStyle = AlertStyle(
     animationType: AnimationType.fromTop,
@@ -141,12 +145,29 @@ class _SubmitPageState extends State<SubmitPage> {
     });
   }
 
+  Future _getUserLocation() {
+    return geolocator
+        .getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
+        .then((Position position) {
+      setState(() {
+        userPosition = position;
+        userLatitude = userPosition.latitude.toString();
+        userLongitude = userPosition.longitude.toString();
+      });
+      pr.show();
+      _uploadData();
+    }).catchError((e) {
+      setState(() {
+        userPosition = null;
+      });
+    });
+  }
+
+  void _methodForUpload() {
+    _getUserLocation();
+  }
+
   Future _uploadData() async {
-    Position position = await Geolocator().getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-
-    String long = position.longitude.toString();
-    String lat = position.latitude.toString();
-
     String username = 'adminDika';
     String password = 'D1k4@passw0rd';
     String basicAuth =
@@ -168,8 +189,8 @@ class _SubmitPageState extends State<SubmitPage> {
     FormData formData = FormData.fromMap({
       "name": name,
       "nik": nip,
-      "longitude" : long,
-      "latitude" : lat,
+      "longitude": userLongitude,
+      "latitude": userLatitude,
       "ktp_image": await MultipartFile.fromFile(_imageFile.path,
           filename: "ktp" + fileName + ".jpg"),
       "video_file": await MultipartFile.fromFile(_videoFile.path,
@@ -252,8 +273,7 @@ class _SubmitPageState extends State<SubmitPage> {
                 borderRadius: BorderRadius.circular(20.0)),
             color: Colors.redAccent,
             onPressed: () {
-              pr.show();
-              _uploadData();
+              _getUserLocation();
             },
             child: const Text('Submit Data',
                 style: TextStyle(fontSize: 20, color: Colors.white)),
