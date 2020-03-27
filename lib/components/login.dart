@@ -122,6 +122,7 @@ class LoginState extends State<Login> {
                         controller: _inputName,
                         onChanged: (value) {
                           inputName = value;
+                          inputName = inputName.toUpperCase();
                         },
                         style: TextStyle(color: Colors.blue),
                         decoration: InputDecoration(
@@ -142,7 +143,7 @@ class LoginState extends State<Login> {
                           inputNip = value;
                         },
                         textCapitalization: TextCapitalization.sentences,
-                        keyboardType: TextInputType.number,
+                        keyboardType: TextInputType.text,
                         style: TextStyle(color: Colors.blue),
                         decoration: InputDecoration(
                             hintText: "NIP",
