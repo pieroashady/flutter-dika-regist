@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:dika_regist/components/file_status.dart';
 import 'package:dika_regist/components/login.dart';
+import 'package:dika_regist/components/absen_reco.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_compress/flutter_video_compress.dart';
@@ -22,18 +24,26 @@ class SubmitPage extends StatefulWidget {
 }
 
 class _SubmitPageState extends State<SubmitPage> {
+  static const routeName = '/submitPage';
   var data;
   File _imageFile;
   File _videoFile;
   String _videoPath;
   ProgressDialog pr;
+  ProgressDialog pr2;
+  ProgressDialog pr3;
   var _flutterVideoCompress = FlutterVideoCompress();
   SharedPreferences prefs;
   String baseUrl = "http://52.77.8.120/upload.php";
+  String notifRegistrasi = "http://52.77.8.120/status_register.php";
   Geolocator geolocator = Geolocator();
   Position userPosition;
   String userLongitude;
   String userLatitude;
+  Timer _timer;
+  var responseApi;
+  int i = 0;
+  bool stop = false;
 
   var alertStyle = AlertStyle(
     animationType: AnimationType.fromTop,
@@ -51,6 +61,12 @@ class _SubmitPageState extends State<SubmitPage> {
       color: Colors.red,
     ),
   );
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -95,8 +111,10 @@ class _SubmitPageState extends State<SubmitPage> {
           onPressed: () async {
             SharedPreferences prefs = await SharedPreferences.getInstance();
             prefs.clear().then((data) {
-              Navigator.push(
-                  context, MaterialPageRoute(builder: (context) => Login()));
+              Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => Login()),
+                  (_) => false);
             });
           },
           color: Colors.red,
@@ -120,32 +138,49 @@ class _SubmitPageState extends State<SubmitPage> {
         .then((image) {
       setState(() {
         _imageFile = image;
-        print(_imageFile.toString());
       });
-    }).catchError((error) => debugPrint(error));
+    }).catchError((error) {
+      _showAlert(
+          alertType: AlertType.error,
+          alertDesc: "Error",
+          alertTitle: "Gagal mengambil foto, coba lagi");
+    });
   }
 
-  Future _getVideo() {
+  Future getVideo() {
     return ImagePicker.pickVideo(source: ImageSource.camera)
         .then((video) async {
+      pr2 = new ProgressDialog(context,
+          type: ProgressDialogType.Normal,
+          isDismissible: true,
+          showLogs: false);
+      pr2.style(message: "Processing video...");
+      pr2.show();
       var compressedVideo = await _flutterVideoCompress.compressVideo(
         video.path,
         quality:
             VideoQuality.HighestQuality, // default(VideoQuality.DefaultQuality)
         deleteOrigin: false, // default(false)
       );
-      debugPrint(compressedVideo.toJson().toString());
       setState(() {
         _videoFile = compressedVideo.file;
         _videoPath = compressedVideo.path;
       });
-      print(_videoFile);
+      pr2.hide();
     }).catchError((error) {
-      print(error);
+      pr2.hide();
+      _showAlert(
+          alertType: AlertType.error,
+          alertDesc: "Error",
+          alertTitle: "Gagal mengambil foto, coba lagi");
     });
   }
 
   Future _getUserLocation() {
+    pr = new ProgressDialog(context,
+        type: ProgressDialogType.Normal, isDismissible: true, showLogs: false);
+    pr.style(message: "Submitting Data...");
+
     return geolocator
         .getCurrentPosition(desiredAccuracy: LocationAccuracy.high)
         .then((Position position) {
@@ -157,14 +192,151 @@ class _SubmitPageState extends State<SubmitPage> {
       pr.show();
       _uploadData();
     }).catchError((e) {
+      print(e);
+      _showAlert(
+          alertType: AlertType.warning,
+          alertDesc: "Please turn on GPS permission thanks",
+          alertTitle: "Permission");
       setState(() {
         userPosition = null;
       });
     });
   }
 
-  void _methodForUpload() {
-    _getUserLocation();
+  Future _statusRegistrasi() async {
+    String username = 'adminDika';
+    String password = 'D1k4@passw0rd';
+    String basicAuth =
+        'Basic ' + base64Encode(utf8.encode('$username:$password'));
+
+    Dio dio = Dio();
+    dio.options.headers['authorization'] = basicAuth;
+
+    prefs = await SharedPreferences.getInstance();
+    String name = prefs.getString('inputName');
+    String nip = prefs.getString('inputNip');
+    String recoId = prefs.getString('reco_id');
+
+    FormData formData =
+        FormData.fromMap({"name": name, "nik": nip, "reco_id": recoId});
+
+    dio.post(notifRegistrasi, data: formData).then((value) async {
+      if (value.statusCode == 200) {
+        if (value.data == "") {
+          print("value from dio, ${value.data}");
+          setState(() {
+            responseApi = "";
+          });
+          print("No data");
+        } else if (value.data != "") {
+          print(value.data);
+          print("ada data");
+          setState(() {
+            responseApi = jsonDecode(value.data);
+          });
+          print(responseApi);
+        }
+      }
+    }).catchError((err) {
+      print(err);
+      pr.hide();
+      setState(() {
+        _videoFile = null;
+      });
+      _showAlert(
+          alertType: AlertType.error,
+          alertTitle: "Gagal",
+          alertDesc: "Gagal registrasi! Coba lagi. ❌ ");
+    });
+  }
+
+  void _scheduler() {
+    const seconds = const Duration(minutes: 1);
+    _timer = new Timer.periodic(seconds, (Timer t) {
+      pr3 = new ProgressDialog(context,
+          type: ProgressDialogType.Normal,
+          isDismissible: true,
+          showLogs: false);
+      pr3.style(message: "Scanning data...");
+
+      if (i >= 5) {
+        pr3.hide();
+        pr3.dismiss();
+        print("Gagal");
+        _showAlert(
+            alertType: AlertType.warning,
+            alertTitle: 'Warning',
+            alertDesc: "Wajah masih menunggu untuk di training. Terimakasih!");
+        setState(() {
+          stop = !stop;
+          i = 0;
+        });
+
+        return t.cancel();
+      }
+
+      setState(() {
+        i = i + 1;
+      });
+
+      print(i);
+
+      print("Scheduler aktif from timer");
+      _statusRegistrasi();
+
+      print("response from scheduler");
+      print(responseApi);
+
+      try {
+        if (responseApi != null) {
+          if (responseApi["status"] == "1" &&
+              responseApi["status_error"] == "0") {
+            pr3.hide();
+            print(responseApi);
+            _showAlert(
+                alertTitle: "Success",
+                alertDesc: "Wajah berhasil di training",
+                alertType: AlertType.success);
+            setState(() {
+              stop = !stop;
+              i = 0;
+            });
+            pr3.dismiss();
+            return t.cancel();
+          } else if (responseApi["status"] == "0" &&
+              responseApi["status_error"] == "0") {
+            pr3.hide();
+            print(responseApi);
+            _showAlert(
+                alertTitle: "Gagal",
+                alertDesc: "Wajah belum berhasil di training",
+                alertType: AlertType.warning);
+            setState(() {
+              stop = !stop;
+              i = 0;
+            });
+            pr3.dismiss();
+            return t.cancel();
+          } else if (responseApi["status"] == "0" &&
+              responseApi["status_error"] == "1") {
+            pr3.hide();
+            print("Gagal");
+            _showAlert(
+                alertTitle: "Gagal",
+                alertDesc: "Wajah tidak berhasil di training",
+                alertType: AlertType.error);
+            setState(() {
+              stop = !stop;
+              i = 0;
+            });
+            pr3.dismiss();
+            return t.cancel();
+          }
+        }
+      } catch (e) {
+        print(e);
+      }
+    });
   }
 
   Future _uploadData() async {
@@ -176,14 +348,15 @@ class _SubmitPageState extends State<SubmitPage> {
     Dio dio = Dio();
     dio.options.headers['authorization'] = basicAuth;
 
-    var fileName = new DateTime.now().millisecondsSinceEpoch.toString();
-
     prefs = await SharedPreferences.getInstance();
     String name = prefs.getString('inputName');
     String nip = prefs.getString('inputNip');
 
-    if (name == null && nip == null) {
-      return print("Null data");
+    if (name == null || nip == null) {
+      return _showAlert(
+          alertType: AlertType.error,
+          alertTitle: "Error",
+          alertDesc: "Mohon izinkan gps untuk menjalankan aplikasi");
     }
 
     FormData formData = FormData.fromMap({
@@ -192,32 +365,52 @@ class _SubmitPageState extends State<SubmitPage> {
       "longitude": userLongitude,
       "latitude": userLatitude,
       "ktp_image": await MultipartFile.fromFile(_imageFile.path,
-          filename: "ktp" + fileName + ".jpg"),
+          filename: name.toUpperCase() + ".jpg"),
       "video_file": await MultipartFile.fromFile(_videoFile.path,
-          filename: "video" + fileName + ".avi")
+          filename: name.toUpperCase() + ".avi")
     });
 
     pr = new ProgressDialog(context,
         type: ProgressDialogType.Normal, isDismissible: true, showLogs: false);
     pr.style(message: "Submitting Data...");
 
-    print("Submitting....");
-    dio.post(baseUrl, data: formData).then((value) {
-      value.statusCode == 200 ? print("Success") : print(value.statusCode);
-      pr.hide();
-      print("Done");
-      setState(() {
-        _imageFile = null;
-        _videoFile = null;
-      });
-      _showAlert(
-          alertType: AlertType.success,
-          alertTitle: "Success",
-          alertDesc: "Terimakasih sudah absen! ✔️");
+    dio.post(baseUrl, data: formData).then((value) async {
+      if (value.statusCode == 200) {
+        var jsonResponse = jsonDecode(value.data);
+        SharedPreferences prefs2 = await SharedPreferences.getInstance();
+        prefs2.setString("reco_id", jsonResponse['user_id']);
+        print(jsonResponse);
+        pr.hide();
+        setState(() {
+          _imageFile = null;
+          _videoFile = null;
+        });
+        _showAlert(
+            alertType: AlertType.success,
+            alertTitle: "Success",
+            alertDesc: "Terimakasih sudah register! ✔️");
+      }
+    }).then((x) {
+      pr3 = new ProgressDialog(context,
+          type: ProgressDialogType.Normal,
+          isDismissible: true,
+          showLogs: false);
+      pr3.style(message: "Scanning data...");
+      pr3.show();
+      print("scheduler aktif");
+      if (stop == false) {
+        print("scheduler aktif");
+        _scheduler();
+      } else {
+        pr3.hide();
+        pr3.dismiss();
+        return setState(() {
+          stop = false;
+          i = 0;
+        });
+      }
     }).catchError((err) {
-      print(err);
       pr.hide();
-      print("Done");
       setState(() {
         _imageFile = null;
         _videoFile = null;
@@ -225,7 +418,7 @@ class _SubmitPageState extends State<SubmitPage> {
       _showAlert(
           alertType: AlertType.error,
           alertTitle: "Gagal",
-          alertDesc: "Gagal absen, mohon coba lagi! ❌ ");
+          alertDesc: "Gagal register, mohon coba lagi! ❌ ");
     });
   }
 
@@ -239,72 +432,115 @@ class _SubmitPageState extends State<SubmitPage> {
     );
   }
 
+  Widget _pageTitle() {
+    return Center(
+      child: Container(
+        margin: EdgeInsets.only(bottom: 40, left: 20, right: 20),
+        child: Text(
+          "Regist Your Face Here",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+        ),
+      ),
+    );
+  }
+
   Widget _textStatus() {
     return _videoFile == null || _imageFile == null
-        ? Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child:
-                Text("Upload foto selfie kamu dan video kamu selama 2 detik"))
-        : Container(
-            margin: EdgeInsets.only(bottom: 20), child: Text("All is set up"));
+        ? Center(
+            child: Container(
+                margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+                child: Text(
+                  "Upload foto ktp kamu dan video wajah kamu selama 2 detik",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                )),
+          )
+        : Center(
+            child: Container(
+                margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
+                child: Text(
+                    "Pastikan foto dan video sudah sesuai format. Tekan submit data",
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          );
   }
 
   Widget _buttonHelper() {
-    return Row(
-      children: <Widget>[
-        Container(
-          height: 50,
-          margin: EdgeInsets.only(right: 20),
-          child: RaisedButton(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0)),
-            color: Colors.redAccent,
-            onPressed: () {
-              _getVideo();
-            },
-            child: const Text('Upload Video',
-                style: TextStyle(fontSize: 20, color: Colors.white)),
+    return Container(
+      child: Row(
+        children: <Widget>[
+          Container(
+            height: 50,
+            margin: EdgeInsets.only(right: 20),
+            child: RaisedButton(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.0)),
+              color: Colors.redAccent,
+              onPressed: () {
+                getVideo();
+              },
+              child: const Text('Upload Video',
+                  style: TextStyle(fontSize: 20, color: Colors.white)),
+            ),
           ),
-        ),
-        Container(
-          height: 50,
-          child: RaisedButton(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0)),
-            color: Colors.redAccent,
-            onPressed: () {
-              _getUserLocation();
-            },
-            child: const Text('Submit Data',
-                style: TextStyle(fontSize: 20, color: Colors.white)),
-          ),
-        )
-      ],
+          Container(
+            height: 50,
+            child: RaisedButton(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.0)),
+              color: Colors.redAccent,
+              onPressed: () {
+                _getUserLocation();
+              },
+              child: const Text('Submit Data',
+                  style: TextStyle(fontSize: 20, color: Colors.white)),
+            ),
+          )
+        ],
+      ),
     );
   }
 
   Widget _submitButton() {
-    pr = new ProgressDialog(context,
-        type: ProgressDialogType.Normal, isDismissible: true, showLogs: false);
-    pr.style(message: "Submitting Data...");
+    return Container(
+      margin: EdgeInsets.only(bottom: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          _videoFile == null || _imageFile == null
+              ? Container(
+                  height: 50,
+                  child: RaisedButton(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20.0)),
+                    color: Colors.redAccent,
+                    onPressed: getVideo,
+                    child: const Text('Upload Video',
+                        style: TextStyle(fontSize: 20, color: Colors.white)),
+                  ),
+                )
+              : _buttonHelper()
+        ],
+      ),
+    );
+  }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        _videoFile == null || _imageFile == null
-            ? Container(
-                height: 50,
-                child: RaisedButton(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0)),
-                  color: Colors.redAccent,
-                  onPressed: _getVideo,
-                  child: const Text('Upload Video',
-                      style: TextStyle(fontSize: 20, color: Colors.white)),
-                ),
-              )
-            : _buttonHelper()
-      ],
+  Widget _loginButton() {
+    return Container(
+      height: 50,
+      child: RaisedButton(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
+        color: Colors.redAccent,
+        onPressed: () {
+          Navigator.push(
+              context, MaterialPageRoute(builder: (context) => LoginReco()));
+        },
+        child: const Text('Absen by face',
+            style: TextStyle(fontSize: 20, color: Colors.white)),
+      ),
     );
   }
 
@@ -317,7 +553,6 @@ class _SubmitPageState extends State<SubmitPage> {
             PopupMenuButton(onSelected: (value) {
               switch (value) {
                 case 1:
-                  print("value from switch case");
                   _confirmLogout();
                   break;
                 default:
@@ -334,9 +569,11 @@ class _SubmitPageState extends State<SubmitPage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          _uploadStatus(),
+          _pageTitle(),
           _textStatus(),
+          _uploadStatus(),
           _submitButton(),
+          _loginButton()
         ],
       ),
       floatingActionButton: FloatingActionButton(

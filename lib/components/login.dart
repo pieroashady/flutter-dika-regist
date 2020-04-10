@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dika_regist/components/submit_page.dart';
+import 'package:dika_regist/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
@@ -40,19 +41,17 @@ class LoginState extends State<Login> {
   );
 
   void _navigateToSubmitData() async {
-    if (inputName != null && inputNip != null) {
+    if (_inputName.text.split(" ").join("") != "" &&
+        _inputNip.text.split(" ").join("") != "") {
       prefs = await SharedPreferences.getInstance();
       prefs.setString("inputName", _inputName.text);
       prefs.setString("inputNip", _inputNip.text);
-      print("Login data saved...");
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SubmitPage()),
-      );
+      Navigator.pushAndRemoveUntil(context,
+          MaterialPageRoute(builder: (context) => SubmitPage()), (_) => false);
     } else {
       Alert(
         context: context,
-        style: alertStyle,
+        style: Utils.alertType,
         type: AlertType.error,
         title: "INVALID",
         desc: "Mohon isi semua data login",

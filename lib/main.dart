@@ -12,12 +12,29 @@ Future<void> main() async {
   String nip = prefs.getString("inputNip");
   print('Name $name and NIP $nip');
 
-  runApp(MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'DIKA E-Regist',
-      theme: ThemeData(
-          primarySwatch: Colors.red, textTheme: GoogleFonts.ralewayTextTheme()),
-      home: name != null && nip != null ? SubmitPage() : Login()));
+  runApp(
+    name != null && nip != null
+        ? MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'DIKA E-Regist',
+            theme: ThemeData(
+              primarySwatch: Colors.red,
+              textTheme: GoogleFonts.ralewayTextTheme(),
+            ),
+            routes: {"/submit-page": (_) => SubmitPage()},
+            home: SubmitPage(),
+          )
+        : MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'DIKA E-Regist',
+            theme: ThemeData(
+              primarySwatch: Colors.red,
+              textTheme: GoogleFonts.ralewayTextTheme(),
+            ),
+            routes: {"/submitPage": (_) => SubmitPage()},
+            home: Login(),
+          ),
+  );
 }
 
 // class MyApp extends StatefulWidget {

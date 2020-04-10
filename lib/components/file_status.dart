@@ -14,6 +14,7 @@ class _FileStatusState extends State<FileStatus> {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
         Container(
           margin: EdgeInsets.only(right: 100),
