@@ -12,6 +12,11 @@ class FileStatus extends StatefulWidget {
 
 class _FileStatusState extends State<FileStatus> {
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,

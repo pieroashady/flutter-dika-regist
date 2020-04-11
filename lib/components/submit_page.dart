@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:dika_regist/components/file_status.dart';
 import 'package:dika_regist/components/login.dart';
 import 'package:dika_regist/components/absen_reco.dart';
+import 'package:dika_regist/components/notifications.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_compress/flutter_video_compress.dart';
@@ -24,11 +25,9 @@ class SubmitPage extends StatefulWidget {
 }
 
 class _SubmitPageState extends State<SubmitPage> {
-  static const routeName = '/submitPage';
   var data;
   File _imageFile;
   File _videoFile;
-  String _videoPath;
   ProgressDialog pr;
   ProgressDialog pr2;
   ProgressDialog pr3;
@@ -44,6 +43,8 @@ class _SubmitPageState extends State<SubmitPage> {
   var responseApi;
   int i = 0;
   bool stop = false;
+  Notifications notif, notif2;
+  String nama, nip, recoId;
 
   var alertStyle = AlertStyle(
     animationType: AnimationType.fromTop,
@@ -70,6 +71,7 @@ class _SubmitPageState extends State<SubmitPage> {
 
   @override
   void initState() {
+    notif.initializing();
     super.initState();
   }
 
@@ -164,15 +166,8 @@ class _SubmitPageState extends State<SubmitPage> {
       );
       setState(() {
         _videoFile = compressedVideo.file;
-        _videoPath = compressedVideo.path;
       });
       pr2.hide();
-    }).catchError((error) {
-      pr2.hide();
-      _showAlert(
-          alertType: AlertType.error,
-          alertDesc: "Error",
-          alertTitle: "Gagal mengambil foto, coba lagi");
     });
   }
 
@@ -213,12 +208,12 @@ class _SubmitPageState extends State<SubmitPage> {
     dio.options.headers['authorization'] = basicAuth;
 
     prefs = await SharedPreferences.getInstance();
-    String name = prefs.getString('inputName');
-    String nip = prefs.getString('inputNip');
-    String recoId = prefs.getString('reco_id');
+    String namePrefs = prefs.getString('inputName');
+    String nipPrefs = prefs.getString('inputNip');
+    String recoIdPrefs = prefs.getString('reco_id');
 
-    FormData formData =
-        FormData.fromMap({"name": name, "nik": nip, "reco_id": recoId});
+    FormData formData = FormData.fromMap(
+        {"name": namePrefs, "nik": nipPrefs, "reco_id": recoIdPrefs});
 
     dio.post(notifRegistrasi, data: formData).then((value) async {
       if (value.statusCode == 200) {
@@ -246,27 +241,29 @@ class _SubmitPageState extends State<SubmitPage> {
       _showAlert(
           alertType: AlertType.error,
           alertTitle: "Gagal",
-          alertDesc: "Gagal registrasi! Coba lagi. ❌ ");
+          alertDesc:
+              "Gagal registrasi! Coba lagi. Nama: $namePrefs, NIP: $nipPrefs");
     });
+  }
+
+  void _showNotif(int id, String title, String desc) {
+    notif = Notifications(notifId: id, notifTitle: title, notifDesc: desc);
+    notif.showNotifications();
   }
 
   void _scheduler() {
     const seconds = const Duration(minutes: 1);
     _timer = new Timer.periodic(seconds, (Timer t) {
-      pr3 = new ProgressDialog(context,
-          type: ProgressDialogType.Normal,
-          isDismissible: true,
-          showLogs: false);
-      pr3.style(message: "Scanning data...");
-
       if (i >= 5) {
-        pr3.hide();
-        pr3.dismiss();
         print("Gagal");
+
+        _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+            "Wajah masih dalam proses training");
+
         _showAlert(
             alertType: AlertType.warning,
             alertTitle: 'Warning',
-            alertDesc: "Wajah masih menunggu untuk di training. Terimakasih!");
+            alertDesc: "Wajah masih menunggu proses training.");
         setState(() {
           stop = !stop;
           i = 0;
@@ -274,10 +271,6 @@ class _SubmitPageState extends State<SubmitPage> {
 
         return t.cancel();
       }
-
-      setState(() {
-        i = i + 1;
-      });
 
       print(i);
 
@@ -291,51 +284,64 @@ class _SubmitPageState extends State<SubmitPage> {
         if (responseApi != null) {
           if (responseApi["status"] == "1" &&
               responseApi["status_error"] == "0") {
-            pr3.hide();
             print(responseApi);
+
+            _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+                "Wajah kamu berhasil ditraining");
+
             _showAlert(
                 alertTitle: "Success",
-                alertDesc: "Wajah berhasil di training",
+                alertDesc: "Wajah berhasil ditraining. Nama: $nama, NIP: $nip",
                 alertType: AlertType.success);
+
             setState(() {
               stop = !stop;
               i = 0;
             });
-            pr3.dismiss();
             return t.cancel();
           } else if (responseApi["status"] == "0" &&
               responseApi["status_error"] == "0") {
-            pr3.hide();
             print(responseApi);
+
+            _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+                "Wajah kamu masih dalam proses training");
+
             _showAlert(
-                alertTitle: "Gagal",
-                alertDesc: "Wajah belum berhasil di training",
+                alertTitle: "Perhatian",
+                alertDesc:
+                    "Wajah masih dalam proses training. Nama: $nama, NIP: $nip",
                 alertType: AlertType.warning);
             setState(() {
               stop = !stop;
               i = 0;
             });
-            pr3.dismiss();
             return t.cancel();
           } else if (responseApi["status"] == "0" &&
               responseApi["status_error"] == "1") {
-            pr3.hide();
             print("Gagal");
+
+            _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+                "Wajah kamu gagal ditraining. Silahkan coba lagi");
+
             _showAlert(
                 alertTitle: "Gagal",
-                alertDesc: "Wajah tidak berhasil di training",
+                alertDesc: "Wajah gagal di training. Nama: $nama, NIP: $nip",
                 alertType: AlertType.error);
+
             setState(() {
               stop = !stop;
               i = 0;
             });
-            pr3.dismiss();
             return t.cancel();
           }
         }
       } catch (e) {
         print(e);
       }
+
+      setState(() {
+        i = i + 1;
+      });
     });
   }
 
@@ -349,25 +355,18 @@ class _SubmitPageState extends State<SubmitPage> {
     dio.options.headers['authorization'] = basicAuth;
 
     prefs = await SharedPreferences.getInstance();
-    String name = prefs.getString('inputName');
-    String nip = prefs.getString('inputNip');
-
-    if (name == null || nip == null) {
-      return _showAlert(
-          alertType: AlertType.error,
-          alertTitle: "Error",
-          alertDesc: "Mohon izinkan gps untuk menjalankan aplikasi");
-    }
+    String namePrefs = prefs.getString('inputName');
+    String nipPrefs = prefs.getString('inputNip');
 
     FormData formData = FormData.fromMap({
-      "name": name,
-      "nik": nip,
+      "name": namePrefs,
+      "nik": nipPrefs,
       "longitude": userLongitude,
       "latitude": userLatitude,
       "ktp_image": await MultipartFile.fromFile(_imageFile.path,
-          filename: name.toUpperCase() + ".jpg"),
+          filename: namePrefs.toUpperCase() + ".jpg"),
       "video_file": await MultipartFile.fromFile(_videoFile.path,
-          filename: name.toUpperCase() + ".avi")
+          filename: namePrefs.toUpperCase() + ".avi")
     });
 
     pr = new ProgressDialog(context,
@@ -384,30 +383,25 @@ class _SubmitPageState extends State<SubmitPage> {
         setState(() {
           _imageFile = null;
           _videoFile = null;
+          recoId = jsonResponse['user_id'];
+          nama = namePrefs;
+          nip = nipPrefs;
         });
         _showAlert(
             alertType: AlertType.success,
             alertTitle: "Success",
-            alertDesc: "Terimakasih sudah register! ✔️");
+            alertDesc:
+                "Terimakasih sudah register! Mohon tunggu status registrasi pada notifikasi ✔️");
       }
-    }).then((x) {
-      pr3 = new ProgressDialog(context,
-          type: ProgressDialogType.Normal,
-          isDismissible: true,
-          showLogs: false);
-      pr3.style(message: "Scanning data...");
-      pr3.show();
-      print("scheduler aktif");
-      if (stop == false) {
-        print("scheduler aktif");
-        _scheduler();
-      } else {
-        pr3.hide();
-        pr3.dismiss();
-        return setState(() {
+    }).then((_) {
+      if (stop) {
+        setState(() {
           stop = false;
           i = 0;
         });
+      } else if (stop == false) {
+        print("scheduler aktif");
+        _scheduler();
       }
     }).catchError((err) {
       pr.hide();
@@ -418,7 +412,7 @@ class _SubmitPageState extends State<SubmitPage> {
       _showAlert(
           alertType: AlertType.error,
           alertTitle: "Gagal",
-          alertDesc: "Gagal register, mohon coba lagi! ❌ ");
+          alertDesc: "Gagal register, mohon coba lagi! ❌");
     });
   }
 

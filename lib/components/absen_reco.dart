@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert' as convert;
 import 'dart:io';
 
-import 'package:flutter/scheduler.dart' as scheduler;
+import 'package:dika_regist/components/notifications.dart';
 import 'package:dika_regist/utils/utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -38,11 +38,19 @@ class _LoginRecoState extends State<LoginReco> {
   Timer _timer;
   var responseApi;
   bool stop = false;
+  Notifications notif;
+  String userId, userName, userNip;
 
   @override
   void dispose() {
     _timer.cancel();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    notif.initializing();
   }
 
   @override
@@ -146,10 +154,9 @@ class _LoginRecoState extends State<LoginReco> {
     prefs = await SharedPreferences.getInstance();
     String name = prefs.getString('inputName');
     String nip = prefs.getString('inputNip');
-    String recoId = prefs.getString('user_id');
 
     FormData formData =
-        FormData.fromMap({"name": name, "nik": nip, "reco_id": recoId});
+        FormData.fromMap({"name": name, "nik": nip, "reco_id": userId});
 
     dio.post(notifUrl, data: formData).then((value) async {
       if (value.statusCode == 200) {
@@ -183,32 +190,31 @@ class _LoginRecoState extends State<LoginReco> {
     });
   }
 
+  void _showNotif(int id, String title, String desc) {
+    notif = Notifications(notifId: id, notifTitle: title, notifDesc: desc);
+    notif.showNotifications();
+  }
+
   void _scheduler() {
     const seconds = const Duration(minutes: 1);
     _timer = new Timer.periodic(seconds, (Timer t) {
-      pr3 = new ProgressDialog(context,
-          type: ProgressDialogType.Normal,
-          isDismissible: true,
-          showLogs: false);
-      pr3.style(message: "Scanning data...");
-
       if (i >= 5) {
         print("Gagal");
+
+        _showNotif(int.parse(userId), "Recognition Gagal",
+            "Recognition $userName $userNip gagal. Coba lagi");
+
         _showAlert(
             alertType: AlertType.warning,
             alertTitle: 'Warning',
-            alertDesc: "Wajah belum di recognition");
+            alertDesc:
+                "Wajah gagal di recognition. Nama: $userName, NIP: $userNip");
         setState(() {
           stop = !stop;
           i = 0;
         });
-        pr3.hide();
         return t.cancel();
       }
-
-      setState(() {
-        i = i + 1;
-      });
 
       print(i);
 
@@ -219,11 +225,14 @@ class _LoginRecoState extends State<LoginReco> {
         if (responseApi != null) {
           if (responseApi != "") {
             if (responseApi["Status"] == "1") {
-              pr3.hide();
               print(responseApi);
+              _showNotif(int.parse(userId), "Recognition Berhasil",
+                  "Recognition $userName $userNip berhasil.");
+
               _showAlert(
                   alertTitle: "Success",
-                  alertDesc: "Wajah berhasil di recognition",
+                  alertDesc:
+                      "Wajah berhasil di recognition. Nama: $userName, Nip: $userNip",
                   alertType: AlertType.success);
               setState(() {
                 stop = !stop;
@@ -231,11 +240,11 @@ class _LoginRecoState extends State<LoginReco> {
               });
               return t.cancel();
             } else if (responseApi["Status"] == "2") {
-              pr3.hide();
               print(responseApi);
               _showAlert(
-                  alertTitle: "Gagal",
-                  alertDesc: "Wajah tidak dikenal",
+                  alertTitle: "Perhatian",
+                  alertDesc:
+                      "Wajah $userName $userNip tidak dikenal. Coba lagi",
                   alertType: AlertType.warning);
               setState(() {
                 stop = !stop;
@@ -248,6 +257,10 @@ class _LoginRecoState extends State<LoginReco> {
       } catch (e) {
         print(e);
       }
+
+      setState(() {
+        i = i + 1;
+      });
     });
   }
 
@@ -288,16 +301,16 @@ class _LoginRecoState extends State<LoginReco> {
     dio.options.headers['authorization'] = basicAuth;
 
     prefs = await SharedPreferences.getInstance();
-    String name = prefs.getString('inputName');
-    String nip = prefs.getString('inputNip');
+    String namePrefs = prefs.getString('inputName');
+    String nipPrefs = prefs.getString('inputNip');
 
     FormData formData = FormData.fromMap({
-      "name": name,
-      "nik": nip,
+      "name": namePrefs,
+      "nik": nipPrefs,
       "longitude": userLongitude,
       "latitude": userLatitude,
       "video_file": await MultipartFile.fromFile(_videoFile.path,
-          filename: name.toUpperCase() + ".avi")
+          filename: namePrefs.toUpperCase() + ".avi")
     });
 
     pr = new ProgressDialog(context,
@@ -313,25 +326,21 @@ class _LoginRecoState extends State<LoginReco> {
         pr.hide();
         setState(() {
           _videoFile = null;
+          userId = jsonResponse['user_id'];
+          userName = namePrefs;
+          userNip = nipPrefs;
         });
         _showAlert(
             alertType: AlertType.success,
             alertTitle: "Success",
-            alertDesc: "Terimakasih sudah melakukan face reco ✔️");
+            alertDesc:
+                "Terimakasih sudah melakukan face reco. Hasil akan diberitahu lewat notifikasi. ✔️");
       }
-    }).then((x) {
-      pr3 = new ProgressDialog(context,
-          type: ProgressDialogType.Normal,
-          isDismissible: true,
-          showLogs: false);
-      pr3.style(message: "Scanning data...");
-      pr3.show();
+    }).then((_) {
       if (stop == false) {
         print("scheduler aktif");
         _scheduler();
       } else {
-        pr3.hide();
-        pr3.dismiss();
         return setState(() {
           stop = false;
           i = 0;
