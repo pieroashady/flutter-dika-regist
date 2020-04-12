@@ -12,7 +12,7 @@ class Notifications {
   InitializationSettings initializationSettings;
 
   void initializing() async {
-    androidInitializationSettings = AndroidInitializationSettings('app_icon');
+    androidInitializationSettings = AndroidInitializationSettings('dika');
     iosInitializationSettings =
         IOSInitializationSettings(defaultPresentAlert: true);
     initializationSettings = InitializationSettings(

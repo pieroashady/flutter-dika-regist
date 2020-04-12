@@ -50,6 +50,7 @@ class _LoginRecoState extends State<LoginReco> {
   @override
   void initState() {
     super.initState();
+    notif = Notifications();
     notif.initializing();
   }
 

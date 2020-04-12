@@ -71,6 +71,7 @@ class _SubmitPageState extends State<SubmitPage> {
 
   @override
   void initState() {
+    notif = Notifications();
     notif.initializing();
     super.initState();
   }
@@ -257,8 +258,8 @@ class _SubmitPageState extends State<SubmitPage> {
       if (i >= 5) {
         print("Gagal");
 
-        _showNotif(int.parse(recoId), "Registrasi $nama $nip",
-            "Wajah masih dalam proses training");
+        _showNotif(
+            1, "Registrasi $nama $nip", "Wajah masih dalam proses training");
 
         _showAlert(
             alertType: AlertType.warning,
@@ -303,7 +304,7 @@ class _SubmitPageState extends State<SubmitPage> {
               responseApi["status_error"] == "0") {
             print(responseApi);
 
-            _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+            _showNotif(1, "Registrasi $nama $nip",
                 "Wajah kamu masih dalam proses training");
 
             _showAlert(
@@ -320,7 +321,7 @@ class _SubmitPageState extends State<SubmitPage> {
               responseApi["status_error"] == "1") {
             print("Gagal");
 
-            _showNotif(int.parse(recoId), "Registrasi $nama $nip",
+            _showNotif(1, "Registrasi $nama $nip",
                 "Wajah kamu gagal ditraining. Silahkan coba lagi");
 
             _showAlert(
