@@ -218,20 +218,23 @@ class _SubmitPageState extends State<SubmitPage> {
 
     dio.post(notifRegistrasi, data: formData).then((value) async {
       if (value.statusCode == 200) {
-        if (value.data == "") {
-          print("value from dio, ${value.data}");
-          setState(() {
-            responseApi = "";
-          });
-          print("No data");
-        } else if (value.data != "") {
-          print(value.data);
-          print("ada data");
-          setState(() {
-            responseApi = jsonDecode(value.data);
-          });
-          print(responseApi);
-        }
+        var responseData = await value.data;
+        setState(() {
+          responseApi = jsonDecode(responseData);
+        });
+        // if (value.data == "") {
+        //   print("value from dio, ${value.data}");
+        //   setState(() {
+        //     responseApi = "";
+        //   });
+        //   print("No data");
+        // } else if (value.data != "") {
+        //   print("ada data");
+        //   setState(() {
+        //     responseApi = jsonDecode(value.data);
+        //   });
+        //   print(responseApi);
+        // }
       }
     }).catchError((err) {
       print(err);
@@ -295,23 +298,6 @@ class _SubmitPageState extends State<SubmitPage> {
                 alertDesc: "Wajah berhasil ditraining. Nama: $nama, NIP: $nip",
                 alertType: AlertType.success);
 
-            setState(() {
-              stop = !stop;
-              i = 0;
-            });
-            return t.cancel();
-          } else if (responseApi["status"] == "0" &&
-              responseApi["status_error"] == "0") {
-            print(responseApi);
-
-            _showNotif(1, "Registrasi $nama $nip",
-                "Wajah kamu masih dalam proses training");
-
-            _showAlert(
-                alertTitle: "Perhatian",
-                alertDesc:
-                    "Wajah masih dalam proses training. Nama: $nama, NIP: $nip",
-                alertType: AlertType.warning);
             setState(() {
               stop = !stop;
               i = 0;
