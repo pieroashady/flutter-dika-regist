@@ -1,5 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dika_regist/components/submit_page.dart';
+import 'package:dika_regist/components/screens/submit_page.dart';
 import 'package:dika_regist/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_clippers/flutter_custom_clippers.dart';

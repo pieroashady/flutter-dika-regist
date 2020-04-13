@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:convert' as convert;
 import 'dart:io';
 
+import 'package:dika_regist/components/camera_screen/video_absenpage.dart';
 import 'package:dika_regist/components/notifications.dart';
+import 'package:dika_regist/components/screens/login.dart';
 import 'package:dika_regist/utils/utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -14,10 +16,9 @@ import 'package:progress_dialog/progress_dialog.dart';
 import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'login.dart';
-
 class LoginReco extends StatefulWidget {
-  LoginReco({Key key}) : super(key: key);
+  final String videoPath;
+  LoginReco({Key key, this.videoPath}) : super(key: key);
 
   @override
   _LoginRecoState createState() => _LoginRecoState();
@@ -99,7 +100,15 @@ class _LoginRecoState extends State<LoginReco> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.0)),
                   color: Colors.redAccent,
-                  onPressed: _getVideo,
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => VideoApp(),
+                      ),
+                      (_) => false,
+                    );
+                  },
                   child: const Text('Upload Video',
                       style: TextStyle(fontSize: 20, color: Colors.white)),
                 ),
@@ -310,7 +319,7 @@ class _LoginRecoState extends State<LoginReco> {
       "nik": nipPrefs,
       "longitude": userLongitude,
       "latitude": userLatitude,
-      "video_file": await MultipartFile.fromFile(_videoFile.path,
+      "video_file": await MultipartFile.fromFile(widget.videoPath,
           filename: namePrefs.toUpperCase() + ".avi")
     });
 
@@ -419,7 +428,7 @@ class _LoginRecoState extends State<LoginReco> {
   }
 
   Widget _textStatus() {
-    return _videoFile == null
+    return widget.videoPath == null
         ? Center(
             child: Container(
                 margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),

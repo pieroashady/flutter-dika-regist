@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dika_regist/components/file_status.dart';
-import 'package:dika_regist/components/login.dart';
-import 'package:dika_regist/components/absen_reco.dart';
+import 'package:dika_regist/components/camera_screen/camera_submitpage.dart';
 import 'package:dika_regist/components/notifications.dart';
+import 'package:dika_regist/components/screens/absen_reco.dart';
+import 'package:dika_regist/components/screens/file_status.dart';
+import 'package:dika_regist/components/screens/login.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_video_compress/flutter_video_compress.dart';
@@ -17,8 +18,8 @@ import 'package:rflutter_alert/rflutter_alert.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SubmitPage extends StatefulWidget {
-  SubmitPage({Key key, this.title}) : super(key: key);
-  final String title;
+  final String imagePath, videoPath;
+  SubmitPage({Key key, this.imagePath, this.videoPath}) : super(key: key);
 
   @override
   _SubmitPageState createState() => _SubmitPageState();
@@ -460,7 +461,12 @@ class _SubmitPageState extends State<SubmitPage> {
                   borderRadius: BorderRadius.circular(20.0)),
               color: Colors.redAccent,
               onPressed: () {
-                getVideo();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CameraApp(recordingMode: true),
+                  ),
+                );
               },
               child: const Text('Upload Video',
                   style: TextStyle(fontSize: 20, color: Colors.white)),
@@ -559,7 +565,12 @@ class _SubmitPageState extends State<SubmitPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          _getImage();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CameraApp(recordingMode: false),
+            ),
+          );
         },
         tooltip: 'Open camera',
         child: Icon(Icons.camera),
