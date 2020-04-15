@@ -94,7 +94,7 @@ class _LoginRecoState extends State<LoginReco> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        _videoFile == null
+        videoPath == null
             ? Container(
                 height: 50,
                 child: RaisedButton(
@@ -106,6 +106,11 @@ class _LoginRecoState extends State<LoginReco> {
                       context,
                       MaterialPageRoute(builder: (context) => VideoApp()),
                     ).then((result) async {
+                      print(result);
+                      if (result == null) {
+                        return;
+                      }
+
                       pr2 = new ProgressDialog(context,
                           type: ProgressDialogType.Normal,
                           isDismissible: true,
@@ -146,7 +151,33 @@ class _LoginRecoState extends State<LoginReco> {
                 borderRadius: BorderRadius.circular(20.0)),
             color: Colors.redAccent,
             onPressed: () {
-              _getVideo();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => VideoApp()),
+              ).then((result) async {
+                print(result);
+                if (result == null) {
+                  return;
+                }
+
+                pr2 = new ProgressDialog(context,
+                    type: ProgressDialogType.Normal,
+                    isDismissible: true,
+                    showLogs: false);
+                pr2.style(message: "Processing video...");
+                pr2.show();
+
+                var compressedVideo = await _flutterVideoCompress.compressVideo(
+                  result,
+                  quality: VideoQuality
+                      .HighestQuality, // default(VideoQuality.DefaultQuality)
+                  deleteOrigin: false, // default(false)
+                );
+                setState(() {
+                  videoPath = compressedVideo.path;
+                });
+                pr2.hide();
+              });
             },
             child: const Text('Upload Video',
                 style: TextStyle(fontSize: 20, color: Colors.white)),
@@ -228,8 +259,8 @@ class _LoginRecoState extends State<LoginReco> {
       if (i >= 5) {
         print("Gagal");
 
-        _showNotif(int.parse(userId), "Recognition Gagal",
-            "Recognition $userName $userNip gagal. Coba lagi");
+        _showNotif(1, "Recognition $userName $userNip",
+            "Wajah kamu gagal di recognition. Coba lagi ya");
 
         _showAlert(
             alertType: AlertType.warning,
@@ -253,8 +284,8 @@ class _LoginRecoState extends State<LoginReco> {
           if (responseApi != "") {
             if (responseApi["Status"] == "1") {
               print(responseApi);
-              _showNotif(int.parse(userId), "Recognition Berhasil",
-                  "Recognition $userName $userNip berhasil.");
+              _showNotif(1, "Recognition $userName $userNip",
+                  "Recognition wajah kamu berhasil. Terima kasih");
 
               _showAlert(
                   alertTitle: "Success",
@@ -268,6 +299,9 @@ class _LoginRecoState extends State<LoginReco> {
               return t.cancel();
             } else if (responseApi["Status"] == "2") {
               print(responseApi);
+              _showNotif(1, "Recognition $userName $userNip",
+                  "Maaf wajah kamu ga dikenal. Coba lagi");
+
               _showAlert(
                   alertTitle: "Perhatian",
                   alertDesc:
@@ -384,8 +418,8 @@ class _LoginRecoState extends State<LoginReco> {
           alertType: AlertType.error,
           alertTitle: "Gagal",
           alertDesc: "Gagal face matching, mohon coba lagi! ❌ ");
+      _timer.cancel();
     });
-    _timer.cancel();
   }
 
   Future _getVideo() {

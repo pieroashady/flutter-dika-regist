@@ -482,6 +482,10 @@ class _SubmitPageState extends State<SubmitPage> {
                             recordingMode: true,
                           )),
                 ).then((result) async {
+                  print(result);
+                  if (result == null) {
+                    return;
+                  }
                   pr2 = new ProgressDialog(context,
                       type: ProgressDialogType.Normal,
                       isDismissible: true,
@@ -555,6 +559,12 @@ class _SubmitPageState extends State<SubmitPage> {
                                   recordingMode: true,
                                 )),
                       ).then((result) async {
+                        print("data file");
+                        print(result);
+                        if (result == null) {
+                          return;
+                        }
+
                         pr2 = new ProgressDialog(context,
                             type: ProgressDialogType.Normal,
                             isDismissible: true,
