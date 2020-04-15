@@ -161,15 +161,7 @@ class _VideoAppState extends State<VideoApp>
 
     try {
       await _controller.stopVideoRecording();
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => LoginReco(
-            videoPath: videoPath,
-          ),
-        ),
-        (_) => false,
-      );
+      Navigator.of(context).pop(videoPath);
     } on CameraException catch (e) {
       print(e);
       return null;
@@ -255,18 +247,16 @@ class _VideoAppState extends State<VideoApp>
                       width: 56,
                       height: 56,
                       child: Icon(
-                        // _isRecording ? Icons.stop : Icons.videocam,
-                        Icons.camera,
+                        _isRecording ? Icons.stop : Icons.videocam,
                         color: Colors.white,
                       ),
                     ),
                     onTap: () {
-                      // if (_isRecording) {
-                      //   stopVideoRecording();
-                      // } else {
-                      //   startVideoRecording();
-                      // }
-                      takePicture();
+                      if (_isRecording) {
+                        stopVideoRecording();
+                      } else {
+                        startVideoRecording();
+                      }
                       print("Button tapped");
                     },
                   ),

@@ -46,6 +46,7 @@ class _SubmitPageState extends State<SubmitPage> {
   bool stop = false;
   Notifications notif, notif2;
   String nama, nip, recoId;
+  String imgPath, videoPath;
 
   var alertStyle = AlertStyle(
     animationType: AnimationType.fromTop,
@@ -66,7 +67,6 @@ class _SubmitPageState extends State<SubmitPage> {
 
   @override
   void dispose() {
-    _timer.cancel();
     super.dispose();
   }
 
@@ -135,6 +135,15 @@ class _SubmitPageState extends State<SubmitPage> {
         ),
       ],
     ).show();
+  }
+
+  void _navigateToCamera() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraApp(recordingMode: true),
+      ),
+    );
   }
 
   Future _getImage() {
@@ -351,9 +360,9 @@ class _SubmitPageState extends State<SubmitPage> {
       "nik": nipPrefs,
       "longitude": userLongitude,
       "latitude": userLatitude,
-      "ktp_image": await MultipartFile.fromFile(_imageFile.path,
+      "ktp_image": await MultipartFile.fromFile(imgPath,
           filename: namePrefs.toUpperCase() + ".jpg"),
-      "video_file": await MultipartFile.fromFile(_videoFile.path,
+      "video_file": await MultipartFile.fromFile(videoPath,
           filename: namePrefs.toUpperCase() + ".avi")
     });
 
@@ -369,8 +378,8 @@ class _SubmitPageState extends State<SubmitPage> {
         print(jsonResponse);
         pr.hide();
         setState(() {
-          _imageFile = null;
-          _videoFile = null;
+          imgPath = null;
+          videoPath = null;
           recoId = jsonResponse['user_id'];
           nama = namePrefs;
           nip = nipPrefs;
@@ -394,8 +403,8 @@ class _SubmitPageState extends State<SubmitPage> {
     }).catchError((err) {
       pr.hide();
       setState(() {
-        _imageFile = null;
-        _videoFile = null;
+        imgPath = null;
+        videoPath = null;
       });
       _showAlert(
           alertType: AlertType.error,
@@ -405,11 +414,13 @@ class _SubmitPageState extends State<SubmitPage> {
   }
 
   Widget _uploadStatus() {
+    print('image path : $imgPath');
+    print("video path : $videoPath");
     return Container(
       padding: EdgeInsets.all(20),
       child: FileStatus(
-        imgFile: _imageFile,
-        videoFile: _videoFile,
+        imgFile: imgPath,
+        videoFile: videoPath,
       ),
     );
   }
@@ -428,7 +439,10 @@ class _SubmitPageState extends State<SubmitPage> {
   }
 
   Widget _textStatus() {
-    return _videoFile == null || _imageFile == null
+    return videoPath == null ||
+            videoPath == "" ||
+            imgPath == null ||
+            imgPath == ""
         ? Center(
             child: Container(
                 margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),
@@ -460,13 +474,40 @@ class _SubmitPageState extends State<SubmitPage> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20.0)),
               color: Colors.redAccent,
-              onPressed: () {
+              onPressed: () async {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => CameraApp(recordingMode: true),
-                  ),
-                );
+                      builder: (context) => CameraApp(
+                            recordingMode: true,
+                          )),
+                ).then((result) async {
+                  pr2 = new ProgressDialog(context,
+                      type: ProgressDialogType.Normal,
+                      isDismissible: true,
+                      showLogs: false);
+                  pr2.style(message: "Processing video...");
+                  pr2.show();
+
+                  var compressedVideo =
+                      await _flutterVideoCompress.compressVideo(
+                    result,
+                    quality: VideoQuality
+                        .HighestQuality, // default(VideoQuality.DefaultQuality)
+                    deleteOrigin: false, // default(false)
+                  );
+                  setState(() {
+                    videoPath = compressedVideo.path;
+                  });
+                  pr2.hide();
+                });
+
+                // Navigator.push(
+                //   context,
+                //   MaterialPageRoute(
+                //     builder: (context) => CameraApp(recordingMode: true),
+                //   ),
+                // );
               },
               child: const Text('Upload Video',
                   style: TextStyle(fontSize: 20, color: Colors.white)),
@@ -496,14 +537,44 @@ class _SubmitPageState extends State<SubmitPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          _videoFile == null || _imageFile == null
+          videoPath == null ||
+                  videoPath == "" ||
+                  imgPath == null ||
+                  imgPath == ""
               ? Container(
                   height: 50,
                   child: RaisedButton(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20.0)),
                     color: Colors.redAccent,
-                    onPressed: getVideo,
+                    onPressed: () async {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => CameraApp(
+                                  recordingMode: true,
+                                )),
+                      ).then((result) async {
+                        pr2 = new ProgressDialog(context,
+                            type: ProgressDialogType.Normal,
+                            isDismissible: true,
+                            showLogs: false);
+                        pr2.style(message: "Processing video...");
+                        pr2.show();
+
+                        var compressedVideo =
+                            await _flutterVideoCompress.compressVideo(
+                          result,
+                          quality: VideoQuality
+                              .HighestQuality, // default(VideoQuality.DefaultQuality)
+                          deleteOrigin: false, // default(false)
+                        );
+                        setState(() {
+                          videoPath = compressedVideo.path;
+                        });
+                        pr2.hide();
+                      });
+                    },
                     child: const Text('Upload Video',
                         style: TextStyle(fontSize: 20, color: Colors.white)),
                   ),
@@ -564,13 +635,18 @@ class _SubmitPageState extends State<SubmitPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => CameraApp(recordingMode: false),
+              builder: (context) => CameraApp(
+                recordingMode: false,
+              ),
             ),
           );
+          setState(() {
+            imgPath = result;
+          });
         },
         tooltip: 'Open camera',
         child: Icon(Icons.camera),

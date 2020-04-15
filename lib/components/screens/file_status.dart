@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class FileStatus extends StatefulWidget {
   FileStatus({Key key, this.imgFile, this.videoFile}) : super(key: key);
-  final File imgFile, videoFile;
+  final String imgFile, videoFile;
 
   @override
   _FileStatusState createState() => _FileStatusState();
@@ -39,9 +39,13 @@ class _FileStatusState extends State<FileStatus> {
             mainAxisAlignment: MainAxisAlignment.end,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: <Widget>[
-              widget.imgFile == null ? Text("❌") : Text("✔️"),
+              widget.imgFile == "" || widget.imgFile == null
+                  ? Text("❌")
+                  : Text("✔️"),
               SizedBox(height: 20),
-              widget.videoFile == null ? Text('❌') : Text("✔️")
+              widget.videoFile == "" || widget.videoFile == null
+                  ? Text('❌')
+                  : Text("✔️")
             ],
           ),
         ),

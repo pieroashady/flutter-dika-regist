@@ -41,6 +41,7 @@ class _LoginRecoState extends State<LoginReco> {
   bool stop = false;
   Notifications notif;
   String userId, userName, userNip;
+  String videoPath;
 
   @override
   void dispose() {
@@ -100,14 +101,30 @@ class _LoginRecoState extends State<LoginReco> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.0)),
                   color: Colors.redAccent,
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
+                  onPressed: () async {
+                    Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => VideoApp(),
-                      ),
-                      (_) => false,
-                    );
+                      MaterialPageRoute(builder: (context) => VideoApp()),
+                    ).then((result) async {
+                      pr2 = new ProgressDialog(context,
+                          type: ProgressDialogType.Normal,
+                          isDismissible: true,
+                          showLogs: false);
+                      pr2.style(message: "Processing video...");
+                      pr2.show();
+
+                      var compressedVideo =
+                          await _flutterVideoCompress.compressVideo(
+                        result,
+                        quality: VideoQuality
+                            .HighestQuality, // default(VideoQuality.DefaultQuality)
+                        deleteOrigin: false, // default(false)
+                      );
+                      setState(() {
+                        videoPath = compressedVideo.path;
+                      });
+                      pr2.hide();
+                    });
                   },
                   child: const Text('Upload Video',
                       style: TextStyle(fontSize: 20, color: Colors.white)),
@@ -189,7 +206,7 @@ class _LoginRecoState extends State<LoginReco> {
       print(err);
       pr.hide();
       setState(() {
-        _videoFile = null;
+        videoPath = null;
         stop = false;
         i = 0;
       });
@@ -319,7 +336,7 @@ class _LoginRecoState extends State<LoginReco> {
       "nik": nipPrefs,
       "longitude": userLongitude,
       "latitude": userLatitude,
-      "video_file": await MultipartFile.fromFile(widget.videoPath,
+      "video_file": await MultipartFile.fromFile(videoPath,
           filename: namePrefs.toUpperCase() + ".avi")
     });
 
@@ -335,7 +352,7 @@ class _LoginRecoState extends State<LoginReco> {
         prefs2.setString("user_id", jsonResponse['user_id']);
         pr.hide();
         setState(() {
-          _videoFile = null;
+          videoPath = null;
           userId = jsonResponse['user_id'];
           userName = namePrefs;
           userNip = nipPrefs;
@@ -361,7 +378,7 @@ class _LoginRecoState extends State<LoginReco> {
       pr.hide();
       setState(() {
         stop = false;
-        _videoFile = null;
+        videoPath = null;
       });
       _showAlert(
           alertType: AlertType.error,
@@ -420,7 +437,7 @@ class _LoginRecoState extends State<LoginReco> {
           children: <Widget>[
             Text("Video Status"),
             SizedBox(width: 100),
-            _videoFile == null ? Text("❌") : Text("✔️")
+            videoPath == "" || videoPath == null ? Text("❌") : Text("✔️")
           ],
         ),
       ),
@@ -428,7 +445,8 @@ class _LoginRecoState extends State<LoginReco> {
   }
 
   Widget _textStatus() {
-    return widget.videoPath == null
+    print("absen video path : $videoPath");
+    return videoPath == "" || videoPath == null
         ? Center(
             child: Container(
                 margin: EdgeInsets.only(bottom: 20, left: 20, right: 20),

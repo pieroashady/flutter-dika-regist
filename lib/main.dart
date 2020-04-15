@@ -22,7 +22,10 @@ Future<void> main() async {
               textTheme: GoogleFonts.ralewayTextTheme(),
             ),
             routes: {"/submit-page": (_) => SubmitPage()},
-            home: SubmitPage(),
+            home: SubmitPage(
+              imagePath: "",
+              videoPath: "",
+            ),
           )
         : MaterialApp(
             debugShowCheckedModeBanner: false,

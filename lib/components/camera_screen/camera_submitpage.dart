@@ -89,7 +89,7 @@ class _CameraAppState extends State<CameraApp>
       return null;
     }
     final Directory extDir = await getApplicationDocumentsDirectory();
-    final String dirPath = '${extDir.path}/Pictures/flutter_test';
+    final String dirPath = '${extDir.path}/media';
     await Directory(dirPath).create(recursive: true);
     final String filePath = '$dirPath/${_timestamp()}.jpg';
 
@@ -99,15 +99,21 @@ class _CameraAppState extends State<CameraApp>
 
     try {
       await _controller.takePicture(filePath);
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SubmitPage(
-            imagePath: filePath,
-          ),
-        ),
-        (_) => false,
-      );
+      _controller?.dispose();
+      setState(() {
+        imagePath = filePath;
+      });
+      Navigator.of(context).pop(filePath);
+      // Navigator.pushAndRemoveUntil(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => SubmitPage(
+      //       imagePath: imagePath,
+      //       videoPath: videoPath,
+      //     ),
+      //   ),
+      //   (_) => false,
+      // );
     } on CameraException catch (e) {
       print(e);
       return null;
@@ -160,15 +166,17 @@ class _CameraAppState extends State<CameraApp>
 
     try {
       await _controller.stopVideoRecording();
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SubmitPage(
-            videoPath: videoPath,
-          ),
-        ),
-        (_) => false,
-      );
+      Navigator.of(context).pop(videoPath);
+      // Navigator.pushAndRemoveUntil(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (context) => SubmitPage(
+      //       videoPath: videoPath,
+      //       imagePath: imagePath,
+      //     ),
+      //   ),
+      //   (_) => false,
+      // );
     } on CameraException catch (e) {
       print(e);
       return null;
@@ -261,8 +269,8 @@ class _CameraAppState extends State<CameraApp>
                       ),
                     ),
                     onTap: () {
-                      if (widget.recordingMode) {
-                        _captureImage();
+                      if (!widget.recordingMode) {
+                        takePicture();
                       } else {
                         if (_isRecording) {
                           stopVideoRecording();
@@ -270,7 +278,6 @@ class _CameraAppState extends State<CameraApp>
                           startVideoRecording();
                         }
                       }
-                      takePicture();
                       print("Button tapped");
                     },
                   ),
@@ -278,14 +285,16 @@ class _CameraAppState extends State<CameraApp>
               ),
             ),
           ),
-          // Positioned(
-          //   left: 0,
-          //   right: 0,
-          //   top: 20.0,
-          //   child: VideoTimer(
-          //     key: _timerKey,
-          //   ),
-          // ),
+          widget.recordingMode
+              ? Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 20.0,
+                  child: VideoTimer(
+                    key: _timerKey,
+                  ),
+                )
+              : Container(),
         ],
       ),
     );
